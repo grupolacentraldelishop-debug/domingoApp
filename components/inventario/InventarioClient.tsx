@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { Tables } from "@/lib/supabase/types";
 import { ProductoCard } from "./ProductoCard";
 import { ProductoFormModal } from "./ProductoFormModal";
+import { BulkImportModal } from "./BulkImportModal";
 import { cn } from "@/lib/utils";
 
 type Expositor = Pick<
@@ -22,6 +23,7 @@ interface Props {
 export function InventarioClient({ eventoId, expositores, productos }: Props) {
   const [activeTab, setActiveTab] = useState<string>("todas");
   const [addModal, setAddModal] = useState<Expositor | null>(null);
+  const [importModal, setImportModal] = useState(false);
 
   const expositorMap = new Map(expositores.map((e) => [e.id, e]));
 
@@ -56,13 +58,22 @@ export function InventarioClient({ eventoId, expositores, productos }: Props) {
         </div>
 
         {activeExpositor && (
-          <button
-            className="btn-primary shrink-0 ml-2"
-            onClick={() => setAddModal(activeExpositor)}
-          >
-            <Plus size={16} />
-            Agregar
-          </button>
+          <div className="flex gap-1.5 shrink-0 ml-2">
+            <button
+              className="btn-secondary"
+              onClick={() => setImportModal(true)}
+            >
+              <Upload size={16} />
+              Importar
+            </button>
+            <button
+              className="btn-primary"
+              onClick={() => setAddModal(activeExpositor)}
+            >
+              <Plus size={16} />
+              Agregar
+            </button>
+          </div>
         )}
       </div>
 
@@ -131,6 +142,14 @@ export function InventarioClient({ eventoId, expositores, productos }: Props) {
           expositor={addModal}
           eventoId={eventoId}
           onClose={() => setAddModal(null)}
+        />
+      )}
+
+      {importModal && activeExpositor && (
+        <BulkImportModal
+          expositor={activeExpositor}
+          eventoId={eventoId}
+          onClose={() => setImportModal(false)}
         />
       )}
     </>

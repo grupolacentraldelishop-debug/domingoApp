@@ -44,3 +44,12 @@ export async function registrarBoleta(args: RegistrarBoletaArgs) {
   revalidatePath(`/eventos/${args.eventoId}`);
   return { success: true, boletaId: data as string };
 }
+
+export async function anularBoleta(boletaId: string, eventoId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("anular_boleta", { p_boleta_id: boletaId });
+  if (error) return { error: error.message };
+  revalidatePath(`/eventos/${eventoId}/ventas`);
+  revalidatePath(`/eventos/${eventoId}`);
+  return { success: true };
+}

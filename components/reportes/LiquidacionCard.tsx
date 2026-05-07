@@ -41,7 +41,7 @@ export function LiquidacionCard({ liq }: { liq: Liquidacion }) {
           <span className="text-ink-muted">Margen Dominga ({liq.comision_dominga}%)</span>
           <span className="text-rose-700">{formatMoney(liq.total_margen_dominga)}</span>
         </div>
-        {(liq.fee_participacion ?? 0) > 0 && (
+        {(liq.fee_participacion ?? 0) > 0 && liq.estado !== 'pagado' && (
           <div className="flex justify-between col-span-2">
             <span className="text-ink-muted">Fee participación</span>
             <span className="text-rose-600">−{formatMoney(liq.fee_participacion)}</span>

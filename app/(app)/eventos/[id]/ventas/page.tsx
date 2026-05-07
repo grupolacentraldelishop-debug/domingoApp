@@ -20,7 +20,7 @@ export default async function VentasPage({ params }: { params: { id: string } })
       : Promise.resolve({ data: [] as Tables<"productos">[] }),
     supabase
       .from("boletas")
-      .select("*, profiles(nombre)")
+      .select("*, profiles(nombre), ventas(id, descripcion, cantidad, pvp_unitario, pvp, margen_marca, margen_dominga, expositor_id)")
       .eq("evento_id", params.id)
       .order("fecha", { ascending: false })
       .limit(30),
@@ -32,7 +32,19 @@ export default async function VentasPage({ params }: { params: { id: string } })
   }));
 
   const boletas = (boletasResult.data ?? []).map((b) => {
-    const { profiles, ...rest } = b as typeof b & { profiles: { nombre: string } | null };
+    const { profiles, ...rest } = b as typeof b & {
+      profiles: { nombre: string } | null;
+      ventas: Array<{
+        id: string;
+        descripcion: string;
+        cantidad: number;
+        pvp_unitario: number;
+        pvp: number;
+        margen_marca: number;
+        margen_dominga: number;
+        expositor_id: string;
+      }>;
+    };
     return { ...rest, profile_nombre: profiles?.nombre ?? null };
   });
 
@@ -47,7 +59,7 @@ export default async function VentasPage({ params }: { params: { id: string } })
 
       <div className="mt-8">
         <h2 className="text-lg mb-3">Boletas recientes</h2>
-        <BoletasHistory boletas={boletas} />
+        <BoletasHistory boletas={boletas} expositorMap={expositorMap} eventoId={params.id} />
       </div>
     </main>
   );

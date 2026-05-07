@@ -43,11 +43,12 @@ export function liquidarMarca(params: {
   feeParticipacion: number;
   pagoEnvio: number;
   comisionDominga: number;
+  feePagado: boolean;
 }): {
   valorATransferir: number;
   balanceReal: number;
 } {
-  const deducciones = params.feeParticipacion + params.pagoEnvio;
+  const deducciones = (params.feePagado ? 0 : params.feeParticipacion) + params.pagoEnvio;
   const bruto = params.totalMargenMarca;
   const balanceReal = r2(bruto - deducciones);
   const valorATransferir = Math.max(0, balanceReal);

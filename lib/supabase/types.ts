@@ -23,6 +23,7 @@ export type Database = {
           cliente_identificacion: string | null
           cliente_razon_social: string | null
           cliente_telefono: string | null
+          estado: string
           evento_id: string
           fecha: string
           id: string
@@ -40,6 +41,7 @@ export type Database = {
           cliente_identificacion?: string | null
           cliente_razon_social?: string | null
           cliente_telefono?: string | null
+          estado?: string
           evento_id: string
           fecha?: string
           id?: string
@@ -57,6 +59,7 @@ export type Database = {
           cliente_identificacion?: string | null
           cliente_razon_social?: string | null
           cliente_telefono?: string | null
+          estado?: string | null
           evento_id?: string
           fecha?: string
           id?: string

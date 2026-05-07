@@ -93,6 +93,7 @@ describe("liquidarMarca", () => {
       feeParticipacion: 50,
       pagoEnvio: 20,
       comisionDominga: 30,
+      feePagado: false,
     });
     expect(result.balanceReal).toBe(280); // 350 - 50 - 20
     expect(result.valorATransferir).toBe(280);
@@ -106,6 +107,7 @@ describe("liquidarMarca", () => {
       feeParticipacion: 50,
       pagoEnvio: 10,
       comisionDominga: 30,
+      feePagado: false,
     });
     expect(result.balanceReal).toBe(-25); // 35 - 50 - 10
     expect(result.valorATransferir).toBe(0); // capped at 0
@@ -119,6 +121,7 @@ describe("liquidarMarca", () => {
       feeParticipacion: 0,
       pagoEnvio: 0,
       comisionDominga: 30,
+      feePagado: false,
     });
     expect(result.balanceReal).toBe(0);
     expect(result.valorATransferir).toBe(0);
@@ -132,6 +135,7 @@ describe("liquidarMarca", () => {
       feeParticipacion: 100,
       pagoEnvio: 0,
       comisionDominga: 30,
+      feePagado: false,
     });
     expect(result.balanceReal).toBe(-30); // 70 - 100
     expect(result.valorATransferir).toBe(0);
@@ -145,8 +149,23 @@ describe("liquidarMarca", () => {
       feeParticipacion: 0,
       pagoEnvio: 0,
       comisionDominga: 30,
+      feePagado: false,
     });
     expect(result.valorATransferir).toBe(700);
     expect(result.balanceReal).toBe(700);
+  });
+
+  it("fee pagado → no se resta del balance", () => {
+    const result = liquidarMarca({
+      totalVentasPvp: 500,
+      totalMargenMarca: 350,
+      totalMargenDominga: 150,
+      feeParticipacion: 50,
+      pagoEnvio: 20,
+      comisionDominga: 30,
+      feePagado: true,
+    });
+    expect(result.balanceReal).toBe(330); // 350 - 0 - 20
+    expect(result.valorATransferir).toBe(330);
   });
 });
