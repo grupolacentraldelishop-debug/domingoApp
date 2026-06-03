@@ -444,6 +444,7 @@ export type Database = {
       }
     }
     Functions: {
+      anular_boleta: { Args: { p_boleta_id: string }; Returns: undefined }
       is_collaborator_of: { Args: { p_evento_id: string }; Returns: boolean }
       is_owner_of: { Args: { p_evento_id: string }; Returns: boolean }
       registrar_boleta: {
