@@ -117,7 +117,10 @@ export async function parsearIngreso(
         // Excel (.xlsx / .xls)
         const buffer = await archivo.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const sheetName = workbook.SheetNames[0];
+        if (!sheetName) throw new Error("El archivo Excel no tiene hojas");
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) throw new Error("No se pudo leer la hoja del archivo Excel");
         const data = XLSX.utils.sheet_to_json(sheet);
         tabularText = JSON.stringify(data, null, 2);
       }
