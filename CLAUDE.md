@@ -104,7 +104,7 @@ valor_a_transferir = max(0, balance_real)
 │   ├── expositores/         # ExpositorCard, ExpositorFormModal, ExpositoresClient
 │   ├── inventario/          # InventarioClient, ProductoCard, ProductoFormModal, BulkImportModal
 │   ├── ventas/              # BoletaBuilder, BoletasHistory, BoletaDetalleModal
-│   └── reportes/            # LiquidacionCard, GastosPanel, ExportCSV, ReporteMarcaDescargas
+│   └── reportes/            # LiquidacionCard, GastosPanel, ExportCSV, ReporteMarcaAcciones, VentasMarcaModal
 ├── lib/
 │   ├── calculos.ts          # Réplica TS de triggers financieros (solo para UI)
 │   ├── reporte-marca.ts     # Arma el reporte por marca: ventas agrupadas + inventario sobrante

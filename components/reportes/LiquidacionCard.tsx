@@ -1,7 +1,7 @@
 import { Views } from "@/lib/supabase/types";
 import { formatMoney, cn } from "@/lib/utils";
 import type { ReporteMarca } from "@/lib/reporte-marca";
-import { ReporteMarcaDescargas } from "./ReporteMarcaDescargas";
+import { ReporteMarcaAcciones } from "./ReporteMarcaAcciones";
 
 type Liquidacion = Views<"liquidacion_marca">;
 
@@ -78,7 +78,7 @@ export function LiquidacionCard({
         </p>
       )}
 
-      <ReporteMarcaDescargas reporte={reporte} liq={liq} eventoNombre={eventoNombre} />
+      <ReporteMarcaAcciones reporte={reporte} liq={liq} eventoNombre={eventoNombre} />
     </div>
   );
 }
