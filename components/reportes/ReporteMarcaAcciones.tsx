@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { FileSpreadsheet, FileText } from "lucide-react";
+import { Eye, FileSpreadsheet, FileText } from "lucide-react";
 import { Views } from "@/lib/supabase/types";
 import type { ReporteMarca } from "@/lib/reporte-marca";
+import { VentasMarcaModal } from "./VentasMarcaModal";
 
 type Liquidacion = Views<"liquidacion_marca">;
 
@@ -13,7 +14,8 @@ interface Props {
   eventoNombre: string;
 }
 
-export function ReporteMarcaDescargas({ reporte, liq, eventoNombre }: Props) {
+export function ReporteMarcaAcciones({ reporte, liq, eventoNombre }: Props) {
+  const [verVentas, setVerVentas] = useState(false);
   const [generando, setGenerando] = useState<"pdf" | "excel" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,9 +51,18 @@ export function ReporteMarcaDescargas({ reporte, liq, eventoNombre }: Props) {
       </p>
       <div className="flex gap-2">
         <button
+          onClick={() => setVerVentas(true)}
+          disabled={reporte.ventas.length === 0}
+          title={reporte.ventas.length === 0 ? "Sin ventas registradas" : undefined}
+          className="btn-secondary flex-1 px-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Eye size={15} />
+          Ver ventas
+        </button>
+        <button
           onClick={() => generar("pdf")}
           disabled={generando !== null}
-          className="btn-secondary flex-1"
+          className="btn-secondary flex-1 px-2 whitespace-nowrap"
         >
           <FileText size={15} />
           {generando === "pdf" ? "Generando…" : "PDF"}
@@ -59,13 +70,14 @@ export function ReporteMarcaDescargas({ reporte, liq, eventoNombre }: Props) {
         <button
           onClick={() => generar("excel")}
           disabled={generando !== null}
-          className="btn-secondary flex-1"
+          className="btn-secondary flex-1 px-2 whitespace-nowrap"
         >
           <FileSpreadsheet size={15} />
           {generando === "excel" ? "Generando…" : "Excel"}
         </button>
       </div>
       {error && <p className="text-xs text-rose-600">{error}</p>}
+      {verVentas && <VentasMarcaModal reporte={reporte} onClose={() => setVerVentas(false)} />}
     </div>
   );
 }
