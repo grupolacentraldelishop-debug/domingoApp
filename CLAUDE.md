@@ -59,6 +59,7 @@ valor_a_transferir = max(0, balance_real)
 | DB / Auth / Realtime | Supabase (PostgreSQL + RLS) | `@supabase/ssr` 0.10.x |
 | IA (bulk import) | Anthropic Claude API | `anthropic` SDK, `@anthropic-ai/sdk` |
 | Parseo archivos | xlsx + papaparse | — |
+| PDF | jspdf + jspdf-autotable | 4.x / 5.x |
 | Forms | react-hook-form + zod | — |
 | Iconos | lucide-react | 0.460.x |
 | Runtime | Bun | 1.x |
@@ -103,9 +104,11 @@ valor_a_transferir = max(0, balance_real)
 │   ├── expositores/         # ExpositorCard, ExpositorFormModal, ExpositoresClient
 │   ├── inventario/          # InventarioClient, ProductoCard, ProductoFormModal, BulkImportModal
 │   ├── ventas/              # BoletaBuilder, BoletasHistory, BoletaDetalleModal
-│   └── reportes/            # LiquidacionCard, GastosPanel, ExportCSV
+│   └── reportes/            # LiquidacionCard, GastosPanel, ExportCSV, ReporteMarcaDescargas
 ├── lib/
 │   ├── calculos.ts          # Réplica TS de triggers financieros (solo para UI)
+│   ├── reporte-marca.ts     # Arma el reporte por marca: ventas agrupadas + inventario sobrante
+│   ├── reporte-marca-archivos.ts # Genera PDF (jspdf) y Excel (xlsx) del reporte; se importa dinámicamente
 │   ├── utils.ts             # Helpers genéricos (cn, formatCurrency, etc.)
 │   └── supabase/
 │       ├── client.ts        # createBrowserClient (Client Components)
@@ -116,10 +119,12 @@ valor_a_transferir = max(0, balance_real)
 │   ├── migrations/
 │   │   ├── 0001_init.sql              # Schema completo, triggers, RPC, vistas, RLS
 │   │   ├── 0002_fix_liquidacion_fee_pagado.sql
-│   │   └── 0003_boleta_estado_anulacion.sql
+│   │   ├── 0003_boleta_estado_anulacion.sql
+│   │   └── 0004_facturacion_excluir_anuladas.sql
 │   └── seed.sql             # Pop-Up #4 + 11 marcas iniciales (idempotente)
 ├── __tests__/
-│   └── calculos.test.ts     # 100% cobertura de lib/calculos.ts con bun test
+│   ├── calculos.test.ts     # 100% cobertura de lib/calculos.ts con bun test
+│   └── reporte-marca.test.ts
 ├── public/
 │   ├── manifest.json        # PWA manifest
 │   ├── icon-192.png
@@ -232,6 +237,7 @@ bunx supabase gen types typescript --project-id snmhninlktyooswnuihi > lib/supab
 - Gestión de eventos, marcas, inventario
 - Módulo de ventas con protección de stock concurrente
 - Reportes y liquidación por marca
+- Reporte por marca descargable en PDF y Excel: ventas agrupadas por producto (con desglose de IVA informativo si la marca tiene IVA) e inventario sobrante para devolver
 - Bulk import de inventario con IA (Claude)
 - Anulación de boletas con devolución de stock
 - Historial y detalle de boletas
@@ -239,7 +245,6 @@ bunx supabase gen types typescript --project-id snmhninlktyooswnuihi > lib/supab
 - Deploy en Vercel + Supabase cloud
 
 ### Pendiente / no implementado
-- **PDF de liquidación por marca**: exportar liquidación individual como PDF. Identificado como "fase 2 post-evento".
 - **Retry offline**: si la conexión cae durante el evento, no hay cola de ventas pendientes. Se muestra error pero hay que reintentar manualmente.
 - **Import CSV de inventario en bulk**: actualmente el bulk import lee el archivo con IA; no hay import directo por CSV estructurado.
 - **Variables de entorno en Preview de Vercel**: solo están configuradas Production y Development. Preview requiere especificar un branch de git.
