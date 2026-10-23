@@ -1,9 +1,19 @@
 import { Views } from "@/lib/supabase/types";
 import { formatMoney, cn } from "@/lib/utils";
+import type { ReporteMarca } from "@/lib/reporte-marca";
+import { ReporteMarcaDescargas } from "./ReporteMarcaDescargas";
 
 type Liquidacion = Views<"liquidacion_marca">;
 
-export function LiquidacionCard({ liq }: { liq: Liquidacion }) {
+export function LiquidacionCard({
+  liq,
+  reporte,
+  eventoNombre,
+}: {
+  liq: Liquidacion;
+  reporte: ReporteMarca;
+  eventoNombre: string;
+}) {
   const negativo = (liq.valor_a_transferir ?? 0) <= 0 && (liq.balance_real ?? 0) < 0;
 
   return (
@@ -67,6 +77,8 @@ export function LiquidacionCard({ liq }: { liq: Liquidacion }) {
           queda pendiente.
         </p>
       )}
+
+      <ReporteMarcaDescargas reporte={reporte} liq={liq} eventoNombre={eventoNombre} />
     </div>
   );
 }

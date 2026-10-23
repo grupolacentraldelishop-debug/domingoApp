@@ -3,6 +3,8 @@ import { formatMoney } from "@/lib/utils";
 import { GastosPanel } from "@/components/reportes/GastosPanel";
 import { LiquidacionCard } from "@/components/reportes/LiquidacionCard";
 import { ExportCSV } from "@/components/reportes/ExportCSV";
+import { construirReporteMarca } from "@/lib/reporte-marca";
+import { Views } from "@/lib/supabase/types";
 
 export default async function ReportesPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -12,6 +14,9 @@ export default async function ReportesPage({ params }: { params: { id: string } 
     { data: gastos },
     { data: boletas },
     { data: facturacion },
+    { data: evento },
+    { data: ventas },
+    { data: productos },
   ] = await Promise.all([
     supabase
       .from("liquidacion_marca")
@@ -26,13 +31,39 @@ export default async function ReportesPage({ params }: { params: { id: string } 
     supabase
       .from("boletas")
       .select("id, total_pvp, total_dominga, metodo_pago, fecha")
-      .eq("evento_id", params.id),
+      .eq("evento_id", params.id)
+      .eq("estado", "activa"),
     supabase
       .from("ventas_con_datos_facturacion")
       .select("*")
       .eq("evento_id", params.id)
       .order("fecha", { ascending: false }),
+    supabase.from("eventos").select("nombre").eq("id", params.id).single(),
+    supabase
+      .from("ventas")
+      .select(
+        "expositor_id, producto_id, descripcion, cantidad, pvp_unitario, pvp, margen_marca, productos(codigo), boletas!inner(estado)"
+      )
+      .eq("evento_id", params.id)
+      .eq("boletas.estado", "activa"),
+    supabase
+      .from("productos")
+      .select("expositor_id, codigo, descripcion, cantidad, vendidos, expositores!inner(evento_id)")
+      .eq("expositores.evento_id", params.id),
   ]);
+
+  const reportePorMarca = (liq: Views<"liquidacion_marca">) =>
+    construirReporteMarca(
+      {
+        nombre: liq.nombre ?? "",
+        tieneIva: liq.tiene_iva ?? false,
+        comisionDominga: liq.comision_dominga ?? 0,
+      },
+      (ventas ?? [])
+        .filter((v) => v.expositor_id === liq.expositor_id)
+        .map((v) => ({ ...v, codigo: v.productos?.codigo ?? null })),
+      (productos ?? []).filter((p) => p.expositor_id === liq.expositor_id)
+    );
 
   const liqs = liquidaciones ?? [];
   const gs = gastos ?? [];
@@ -97,7 +128,12 @@ export default async function ReportesPage({ params }: { params: { id: string } 
         ) : (
           <div className="grid sm:grid-cols-2 gap-4">
             {liqs.map((liq) => (
-              <LiquidacionCard key={liq.expositor_id} liq={liq} />
+              <LiquidacionCard
+                key={liq.expositor_id}
+                liq={liq}
+                reporte={reportePorMarca(liq)}
+                eventoNombre={evento?.nombre ?? ""}
+              />
             ))}
           </div>
         )}
