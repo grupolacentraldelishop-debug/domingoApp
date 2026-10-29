@@ -3,6 +3,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,16 +33,7 @@ function buildPrompt(expositor: ExpositorData, notasUsuario: string): string {
 
 Marca: "${expositor.nombre}" | IVA: ${ivaLabel} | Comisión Dominga: ${expositor.comision_dominga}%${notasUsuario ? `\nNotas del usuario: "${notasUsuario}"` : ""}
 
-Analiza este documento de ingreso de inventario y extrae los productos.
-
-Responde SOLO con JSON válido, sin texto adicional:
-{
-  "productos": [
-    { "codigo": "string o null", "descripcion": "string", "pvp": number o null, "cantidad": number }
-  ],
-  "advertencias": ["string"],
-  "notas": "breve resumen de qué se encontró y cualquier discrepancia con la marca"
-}
+Analiza este documento de ingreso de inventario y registra los productos con la herramienta ${TOOL_NAME}. En "notas" deja un breve resumen de qué se encontró y cualquier discrepancia con la marca.
 
 Reglas importantes:
 - pvp es el precio de venta al público en dólares (número positivo)
@@ -53,23 +45,65 @@ Reglas importantes:
 - El campo "codigo" es opcional (SKU, referencia); usa null si no existe`;
 }
 
-function parseClaudeResponse(text: string): ParseResultado {
-  const json = JSON.parse(text.trim().replace(/^```json\n?/, "").replace(/\n?```$/, ""));
+// Una herramienta con input_schema hace que la API entregue el JSON ya parseado;
+// pedir JSON en texto libre fallaba con inventarios largos (respuesta cortada a la mitad)
+const TOOL_NAME = "registrar_inventario";
 
-  const productos: ParsedProducto[] = (json.productos ?? []).map(
-    (p: { codigo?: string | null; descripcion?: string; pvp?: number | null; cantidad?: number }) => ({
-      codigo: p.codigo ?? null,
-      descripcion: p.descripcion ?? "",
-      pvp: typeof p.pvp === "number" ? p.pvp : null,
-      cantidad: typeof p.cantidad === "number" && p.cantidad > 0 ? Math.round(p.cantidad) : 1,
-      valido: !!p.descripcion && typeof p.pvp === "number" && p.pvp > 0,
+const registrarInventarioTool: Anthropic.Tool = {
+  name: TOOL_NAME,
+  description: "Registra los productos extraídos del documento de ingreso de inventario.",
+  input_schema: {
+    type: "object",
+    properties: {
+      productos: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            codigo: { type: ["string", "null"], description: "SKU o referencia; null si no existe" },
+            descripcion: { type: "string" },
+            pvp: { type: ["number", "null"], description: "Precio de venta al público en dólares" },
+            cantidad: { type: "number" },
+          },
+          required: ["codigo", "descripcion", "pvp", "cantidad"],
+        },
+      },
+      advertencias: { type: "array", items: { type: "string" } },
+      notas: { type: "string" },
+    },
+    required: ["productos", "advertencias", "notas"],
+  },
+};
+
+const respuestaSchema = z.object({
+  productos: z.array(
+    z.object({
+      codigo: z.string().nullish(),
+      descripcion: z.string().nullish(),
+      pvp: z.number().nullish(),
+      cantidad: z.number().nullish(),
     })
-  );
+  ),
+  advertencias: z.array(z.string()).nullish(),
+  notas: z.string().nullish(),
+});
+
+function normalizarRespuesta(input: unknown): ParseResultado | { error: string } {
+  const parsed = respuestaSchema.safeParse(input);
+  if (!parsed.success) return { error: "La respuesta de Claude no tiene el formato esperado. Intenta de nuevo." };
+
+  const productos: ParsedProducto[] = parsed.data.productos.map((p) => ({
+    codigo: p.codigo ?? null,
+    descripcion: p.descripcion ?? "",
+    pvp: p.pvp ?? null,
+    cantidad: p.cantidad != null && p.cantidad > 0 ? Math.round(p.cantidad) : 1,
+    valido: !!p.descripcion && p.pvp != null && p.pvp > 0,
+  }));
 
   return {
     productos,
-    advertencias: (json.advertencias ?? []) as string[],
-    notas: (json.notas as string) ?? "",
+    advertencias: parsed.data.advertencias ?? [],
+    notas: parsed.data.notas ?? "",
   };
 }
 
@@ -135,12 +169,22 @@ export async function parsearIngreso(
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 2048,
+      max_tokens: 16000,
+      tools: [registrarInventarioTool],
+      tool_choice: { type: "tool", name: TOOL_NAME },
       messages,
     });
 
-    const text = response.content.find((b) => b.type === "text")?.text ?? "";
-    return parseClaudeResponse(text);
+    if (response.stop_reason === "max_tokens") {
+      return {
+        error:
+          "El documento tiene demasiados productos para procesarlo de una sola vez. Divídelo en partes más pequeñas e inténtalo de nuevo.",
+      };
+    }
+
+    const toolUse = response.content.find((b) => b.type === "tool_use");
+    if (!toolUse) return { error: "No se pudieron extraer productos del documento. Intenta de nuevo." };
+    return normalizarRespuesta(toolUse.input);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { error: `Error al procesar el documento: ${msg}` };
